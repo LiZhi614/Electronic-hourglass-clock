@@ -1,0 +1,77 @@
+C51 COMPILER V9.01   MAIN                                                                  07/29/2022 11:55:16 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: E:\Keil_v5\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include"reg52.h"
+   2          #include "uart.h"
+   3          #include "mpu6050.h"
+   4          #include "iic.h"
+   5          #include "max7219.h"
+   6          
+   7          sbit WIFI = P1^7;
+   8          
+   9           void main()
+  10          {       
+  11   1              int i;
+  12   1              /*串口初始化*/
+  13   1              UsartInit();
+  14   1              /*陀螺仪定时器2初始化*/
+  15   1              InitMPU6050() ;
+  16   1              Timer2Init();
+  17   1               /*点阵初始化*/
+  18   1               Init_MAX7219();  
+  19   1               /*定时沙漏初始化*/
+  20   1               Timer0Init();   
+  21   1              /*中断优先级*/
+  22   1                      WIFI=1; 
+  23   1              
+  24   1               for(i=1;i<9;i++) Write_Max7219(i,0x00),Write_Max7219two(i,0x00);
+  25   1              jianshao();
+  26   1         while(1)
+  27   1         {
+  28   2                               if(ax>85&&zf==1) {zhengfu=1;
+  29   3                                                                              ES=0;
+  30   3                                                              
+  31   3                                                              if(TR0!=1)      duiji(),jianshao();
+  32   3                                                              TR0=1;}
+  33   2                              else if(ax>80&&zf==0) {zhengfu=0;
+  34   3                                                                                      ES=0;
+  35   3                                                                      
+  36   3                                                                      if(TR0!=1)      duiji(),jianshao();
+  37   3                                                                      TR0=1;}
+  38   2                      else  { 
+  39   3                              //      if(TR0!=0)      for(i=1;i<9;i++) Write_Max7219(i,0x00),Write_Max7219two(i,0x00);
+  40   3                                              if(TR0!=0){     for(i=1;i<9;i++) Write_Max7219(i,0x00),Write_Max7219two(i,0x00);
+  41   4                                                                      TR0=0;
+  42   4                                                                      ES=1;
+  43   4                                                                      zhengfu=0;
+  44   4                                                                              }
+  45   3                                      xianshitime();
+  46   3                              
+  47   3                                      }
+  48   2      //      send_string(a);
+  49   2              } 
+  50   1      }
+  51          
+  52          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.01   MAIN                                                                  07/29/2022 11:55:16 PAGE 2   
+
+   CODE SIZE        =    213    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

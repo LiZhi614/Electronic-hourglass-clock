@@ -1,0 +1,148 @@
+C51 COMPILER V9.01   MPU6050                                                               07/29/2022 11:55:18 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MPU6050
+OBJECT MODULE PLACED IN mpu6050.OBJ
+COMPILER INVOKED BY: E:\Keil_v5\C51\BIN\C51.EXE mpu6050.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "mpu6050.h"
+   2          #include "iic.h"
+   3          #include "reg52.h"
+   4          #include "math.h"
+   5          
+   6          float ax;
+   7          char a[6];
+   8          int zf;
+   9          
+  10          void I2c_Write(uchar REG_Address,uchar dat)
+  11          {
+  12   1              I2cStart();
+  13   1              I2c_SendByte(SlaveAddress);
+  14   1              I2c_SendByte(REG_Address);
+  15   1              I2c_SendByte(dat);
+  16   1              I2cStop();
+  17   1              
+  18   1      }
+  19          unsigned char I2c_Read(uchar REG_Address)
+  20          {
+  21   1              uchar REG_dat;
+  22   1              I2cStart();
+  23   1              I2c_SendByte(SlaveAddress);
+  24   1              I2c_SendByte(REG_Address);
+  25   1              I2cStart();
+  26   1              I2c_SendByte(SlaveAddress+1     );
+  27   1              REG_dat=I2c_ReadByte(); 
+  28   1              I2cStop();
+  29   1              return  REG_dat;
+  30   1              
+  31   1      }
+  32          
+  33          void InitMPU6050()      
+  34          {
+  35   1              I2c_Write(SMPLRT_DIV,0x07);     
+  36   1              I2c_Write(CONFIG,0x06); 
+  37   1              I2c_Write(GYRO_CONFIG,0x18);    
+  38   1              I2c_Write(ACCEL_CONFIG,0x01);   
+  39   1              I2c_Write(PWR_MGMT_1,0x00);     
+  40   1      }
+  41          
+  42          unsigned int Read_dat(uchar REG_Address)
+  43          {
+  44   1              char H,L;
+  45   1              H=I2c_Read(REG_Address);
+  46   1              L=I2c_Read(REG_Address+1);
+  47   1              return (H<<8)+L; 
+  48   1      //              if((H<<8)+L<0)    
+  49   1      //        return -(H<<8)+L;   //合成数据
+  50   1      //              else  return (H<<8)+L; 
+  51   1               
+  52   1      }
+  53          
+  54          
+  55          
+C51 COMPILER V9.01   MPU6050                                                               07/29/2022 11:55:18 PAGE 2   
+
+  56           void printf(uchar *s,  int temp_data)
+  57          {       
+  58   1              
+  59   1                      temp_data=temp_data/10;
+  60   1              if(temp_data<0)
+  61   1              {
+  62   2                      temp_data=-temp_data;
+  63   2                      *s='-';
+  64   2                              
+  65   2              }
+  66   1              else 
+  67   1                      *s=' ';
+  68   1              
+  69   1                      temp_data=temp_data%1000000;
+  70   1              *++s =temp_data/100000+0x30;
+  71   1                       temp_data=temp_data%100000;      //取余运算
+  72   1              *++s =temp_data/10000+0x30;
+  73   1                      temp_data=temp_data%10000;      //取余运算
+  74   1              *++s =temp_data/1000+0x30;
+  75   1                      temp_data=temp_data%1000;      //取余运算
+  76   1              *++s =temp_data/100+0x30;
+  77   1                              temp_data=temp_data%100;      //取余运算
+  78   1              *++s =temp_data/10+0x30;
+  79   1                              temp_data=temp_data%10;      //取余运算
+  80   1              *++s =temp_data+0x30;
+  81   1      }
+  82          unsigned int zfp(uchar REG_Address)
+  83          {
+  84   1              char H,L;
+  85   1              H=I2c_Read(REG_Address);
+  86   1              L=I2c_Read(REG_Address+1);
+  87   1                      if((H<<8)+L<0)    
+  88   1              return 0;   //合成数据
+  89   1                      else  return 1; 
+  90   1      //       
+  91   1      }
+  92          
+  93          
+  94          
+  95          void Timer2Init()
+  96          {
+  97   1              T2MOD|=0X10;//选择为定时器0模式，工作方式1，仅用TR0打开启动。
+  98   1      
+  99   1              RCAP2H=TH2=0XFC;        //给定时器赋初值，定时1ms
+ 100   1              RCAP2L=TL2=0X18;        
+ 101   1              ET2=1;//打开定时器0中断允许
+ 102   1              EA=1;//打开总中断
+ 103   1              TR2=1;//打开定时器                      
+ 104   1      }
+ 105          
+ 106          void Timer2() interrupt 5
+ 107          {
+ 108   1      
+ 109   1              static int i;
+ 110   1              TF2=0;
+ 111   1              RCAP2H=TH2=0XFC;        //给定时器赋初值，定时1ms
+ 112   1              RCAP2L=TL2=0X18;
+ 113   1              i++;
+ 114   1              if(i==100)
+ 115   1              {
+ 116   2              ax=Read_dat(ACCEL_XOUT_H)/180;
+ 117   2              zf=zfp( ACCEL_XOUT_H);
+C51 COMPILER V9.01   MPU6050                                                               07/29/2022 11:55:18 PAGE 3   
+
+ 118   2      //      printf(a,ax);
+ 119   2              i=0;            
+ 120   2              }       
+ 121   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    690    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     14      13
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

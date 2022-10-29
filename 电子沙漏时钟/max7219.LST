@@ -1,0 +1,445 @@
+C51 COMPILER V9.01   MAX7219                                                               07/29/2022 11:55:20 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAX7219
+OBJECT MODULE PLACED IN max7219.OBJ
+COMPILER INVOKED BY: E:\Keil_v5\C51\BIN\C51.EXE max7219.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "max7219.h"
+   2          #include"uart.h"
+   3          
+   4          
+   5          sbit Max7219_pinCLK = P1^4;
+   6          sbit Max7219_pinCS  = P1^3;
+   7          sbit Max7219_pinDIN = P1^2;
+   8          
+   9          sbit Max7219_pinCLK2 = P2^2;
+  10          sbit Max7219_pinCS2  = P2^1;
+  11          sbit Max7219_pinDIN2 = P2^0;
+  12          
+  13          
+  14          
+  15          
+  16          
+  17          
+  18          char code disp1[10][4]={
+  19          {0x00,0x1C,0x22,0x1C}, //0
+  20          {0x00,0x24,0x3E,0x20}, //1
+  21          {0x00,0x3A,0x2A,0x2E},
+  22          {0x00,0x2A,0x2A,0x3E},
+  23          {0x00,0x0E,0x08,0x3E},
+  24          {0x00,0x2E,0x2A,0x3A}, //5
+  25          {0x00,0x3E,0x2A,0x3A},
+  26          {0x00,0x02,0x02,0x3E},
+  27          {0x00,0x3E,0x2A,0x3E},
+  28          {0x00,0x2E,0x2A,0x3E},
+  29          
+  30          };
+  31          char code disp2[10][4]={
+  32          {0x38,0x44,0x38,0x00}, //0
+  33          {0x04,0x7C,0x24,0x00}, //1
+  34          {0x74,0x54,0x5C,0x00},
+  35          {0x7c,0x54,0x54,0x00},
+  36          {0x7c,0x10,0x70,0x00},
+  37          {0x5c,0x54,0x74,0x00}, //5
+  38          {0x5c,0x54,0x7C,0x00},
+  39          {0x7c,0x40,0x40,0x00},
+  40          {0x7C,0x54,0x7C,0x00},
+  41          {0x7C,0x54,0x74,0x00},
+  42          };
+  43          
+  44          
+  45          int time;//定时时间
+  46          
+  47          /*点阵*/
+  48          int hang1, hang2, hang3, hang4, hang5, hang6, hang7, hang8;
+  49          int hangtwo1=0x01, hangtwo2, hangtwo3, hangtwo4, hangtwo5, hangtwo6, hangtwo7, hangtwo8;
+  50          
+  51          int code you[28]={1,4,6,9,11,16,18,20,22,25,27,29,31,33,36,38,40,42,44,46,49,51,53,55,57,59,61};
+  52          
+  53          int zhengfu=0;
+  54          int liangdu=1;
+  55          int num=0,k=8;
+C51 COMPILER V9.01   MAX7219                                                               07/29/2022 11:55:20 PAGE 2   
+
+  56          int zy=0,zf2=0;//每两次下落的格子减1
+  57          
+  58          /*点阵函数*/
+  59          void Write_Max7219(char address,char dat);
+  60          void Write_Max7219two(char address,char dat);
+  61          void Init_MAX7219(void);
+  62          void Write_Max7219_byte(char DATA);
+  63          void Write_Max7219_bytetwo(char DATA);
+  64          
+  65          void duiji();
+  66          void jianshao();
+  67          int panduan(int a,int n);
+  68          int panduanzy(int a);
+  69          int panduanyou(int a);
+  70          void xialuo(int n,int num,int hang,int hang2);
+  71          void xialuozuo(int l,int num);
+  72          void Timer0Init();       
+  73          
+  74          
+  75          
+  76          
+  77          
+  78          
+  79          void Timer0Init()
+  80          {
+  81   1              TMOD|=0X01;//选择为定时器0模式，工作方式1，仅用TR0打开启动。
+  82   1              TH0=0XFC;       //给定时器赋初值，定时1ms
+  83   1              TL0=0X18;       
+  84   1              ET0=1;//打开定时器0中断允许
+  85   1              EA=1;//打开总中断
+  86   1              TR0=0;//打开定时器                      
+  87   1      }
+  88          void Timer0() interrupt 1
+  89          {
+  90   1      //      static int i;
+  91   1              int n;
+  92   1              TH0=0XFC;       //给定时器赋初值，定时1ms
+  93   1              TL0=0X18;
+  94   1              time++;
+  95   1              if(time==500)
+  96   1              {
+  97   2                       if(zf2!=zhengfu)
+  98   2                       {duiji();
+  99   3                       jianshao();
+ 100   3              
+ 101   3                       zf2=zhengfu;
+ 102   3      
+ 103   3                       };
+ 104   2                       
+ 105   2      
+ 106   2                      if(num==1||num==4||num==9||num==16||num==25||num==36||num==49||num==64)
+ 107   2                      k=8;
+ 108   2                      
+ 109   2              
+ 110   2                      
+ 111   2                      n++;
+ 112   2                      switch(n)
+ 113   2                      {
+ 114   3                              case 1: if(num<64){Write_Max7219(8,hang8|0x80);}
+ 115   3                                              Write_Max7219two(8,~hang8&~0x80);                                       
+ 116   3                                              break;
+ 117   3                              case 2: if(num<49){Write_Max7219(7,hang7|0x40);Write_Max7219(8,hang8&~0x80);}
+C51 COMPILER V9.01   MAX7219                                                               07/29/2022 11:55:20 PAGE 3   
+
+ 118   3                                              else{
+ 119   4                                              if(panduanzy(num)){Write_Max7219(8,hang8&~0x80);xialuo(7,num,hang7,hang8);}
+ 120   4                                              if(panduanyou(num)){xialuozuo(0x40,num);}
+ 121   4                                              }
+ 122   3                                              Write_Max7219two(8,~hang8|0x80);        jianshao();     
+ 123   3                                              break;
+ 124   3                              case 3: if(num<36){Write_Max7219(6,hang6|0x20);Write_Max7219(7,hang7&~0x40);}
+ 125   3                                              else{
+ 126   4                                              if(panduanzy(num)){Write_Max7219(7,hang7&~0x40);xialuo(6,num,hang6,hang7);}
+ 127   4                                              if(panduanyou(num)){xialuozuo(0x20,num);}
+ 128   4                                              }
+ 129   3                                      
+ 130   3                                              break;
+ 131   3                              case 4: if(num<25){Write_Max7219(5,hang5|0x10);Write_Max7219(6,hang6&~0x20);}
+ 132   3                                              else{
+ 133   4                                              if(panduanzy(num)){Write_Max7219(6,hang6&~0x20);xialuo(5,num,hang5,hang6);}
+ 134   4                                              if(panduanyou(num)){xialuozuo(0x10,num);}
+ 135   4                                              }       
+ 136   3                                              break;
+ 137   3                              case 5: if(num<16){Write_Max7219(4,hang4|0x08);Write_Max7219(5,hang5&~0x10);}
+ 138   3                                              else{
+ 139   4                                              if(panduanzy(num)){Write_Max7219(5,hang5&~0x10);xialuo(4,num,hang4,hang5);}
+ 140   4                                              if(panduanyou(num)){xialuozuo(0x08,num);}
+ 141   4                                              
+ 142   4                                              }       
+ 143   3                                              break;
+ 144   3                              case 6: if(num<9){Write_Max7219(3,hang3|0x04);Write_Max7219(4,hang4&~0x08);}
+ 145   3                                              else{
+ 146   4                                              if(panduanzy(num)){Write_Max7219(4,hang4&~0x08);xialuo(3,num,hang3,hang4);}
+ 147   4                                              if(panduanyou(num)){xialuozuo(0x04,num);}                                       
+ 148   4                                              }       
+ 149   3                                              break;
+ 150   3                              case 7: if(num<4){Write_Max7219(2,hang2|0x02);Write_Max7219(3,hang3&~0x04);}
+ 151   3                                              else{   
+ 152   4                                                      if(panduanzy(num)){Write_Max7219(3,hang3&~0x04);xialuo(2,num,hang2,hang3);}
+ 153   4                                                      if(panduanyou(num)){xialuozuo(0x02,num);}
+ 154   4                                              
+ 155   4                                              }       
+ 156   3                                              break;
+ 157   3                              case 8: if(num<1){Write_Max7219(1,0x01);Write_Max7219(2,hang2&~0x02);}  
+ 158   3                                              break;
+ 159   3      
+ 160   3                              default:        ;               
+ 161   3                      }
+ 162   2              
+ 163   2                      if(n==k)
+ 164   2                      {
+ 165   3                       if(num>1&&num!=4&&num!=9&&num!=16&&num!=25&&num!=36&&num!=49&&num!=64)
+ 166   3                              zy++;
+ 167   3                              num++;
+ 168   3              
+ 169   3                      if(zy==2)
+ 170   3                      {zy=0;k--;}
+ 171   3              
+ 172   3                      
+ 173   3                      n=0;
+ 174   3                      if(panduan(num,1)) hang1=(hang1<<1)+1;
+ 175   3                      if(panduan(num,2)) hang2=(hang2<<1)+1;
+ 176   3                      if(panduan(num,3)) hang3=(hang3<<1)+1;
+ 177   3                      if(panduan(num,4)) hang4=(hang4<<1)+1;
+ 178   3                      if(panduan(num,5)) hang5=(hang5<<1)+1;
+ 179   3                      if(panduan(num,6)) hang6=(hang6<<1)+1;
+C51 COMPILER V9.01   MAX7219                                                               07/29/2022 11:55:20 PAGE 4   
+
+ 180   3                      if(panduan(num,7)) hang7=(hang7<<1)+1;
+ 181   3                      if(panduan(num,8)) hang8=(hang8<<1)+1;
+ 182   3      
+ 183   3                      if(panduan(num,1)) hangtwo1=(hangtwo1<<1)+1;
+ 184   3                      if(panduan(num,2)) hangtwo2=(hangtwo2<<1)+1;
+ 185   3                      if(panduan(num,3)) hangtwo3=(hangtwo3<<1)+1;
+ 186   3                      if(panduan(num,4)) hangtwo4=(hangtwo4<<1)+1;
+ 187   3                      if(panduan(num,5)) hangtwo5=(hangtwo5<<1)+1;
+ 188   3                      if(panduan(num,6)) hangtwo6=(hangtwo6<<1)+1;
+ 189   3                      if(panduan(num,7)) hangtwo7=(hangtwo7<<1)+1;
+ 190   3                      if(panduan(num,8)) hangtwo8=(hangtwo8<<1)+1;
+ 191   3      
+ 192   3      
+ 193   3                      
+ 194   3                      duiji();
+ 195   3      
+ 196   3                      
+ 197   3                      }               
+ 198   2                      time=0;
+ 199   2              
+ 200   2                      
+ 201   2              }
+ 202   1      } 
+ 203          
+ 204          
+ 205          
+ 206          void Write_Max7219_byte(char DATA)         
+ 207          {
+ 208   1              char i;    
+ 209   1                      Max7219_pinCS=0;                
+ 210   1                  for(i=8;i>=1;i--)
+ 211   1                {               
+ 212   2                  Max7219_pinCLK=0;
+ 213   2                  Max7219_pinDIN=DATA&0x80;
+ 214   2                  DATA=DATA<<1;
+ 215   2                  Max7219_pinCLK=1;
+ 216   2                 }                                 
+ 217   1      }
+ 218          //：向MAX7219写入数据
+ 219          
+ 220          
+ 221          
+ 222          
+ 223          
+ 224          void Write_Max7219_bytetwo(char DATA)         
+ 225          {
+ 226   1              char i;    
+ 227   1                      Max7219_pinCS2=0;               
+ 228   1                  for(i=8;i>=1;i--)
+ 229   1                {               
+ 230   2                  Max7219_pinCLK2=0;
+ 231   2                  Max7219_pinDIN2=DATA&0x80;
+ 232   2                  DATA=DATA<<1;
+ 233   2                  Max7219_pinCLK2=1;
+ 234   2                 }                                 
+ 235   1      }
+ 236          ///////////////
+ 237          
+ 238          void Write_Max7219(char address,char dat)
+ 239          {        
+ 240   1               if(zhengfu==0)
+ 241   1               {
+C51 COMPILER V9.01   MAX7219                                                               07/29/2022 11:55:20 PAGE 5   
+
+ 242   2           Max7219_pinCS=0;
+ 243   2               Write_Max7219_byte(address);           //写入地址，即数码管编号
+ 244   2           Write_Max7219_byte(dat);               //写入数据，即数码管显示数字 
+ 245   2               Max7219_pinCS=1;
+ 246   2               }else{ Max7219_pinCS2=0;
+ 247   2                               Write_Max7219_bytetwo(address);           //写入地址，即数码管编号
+ 248   2                           Write_Max7219_bytetwo(dat);               //写入数据，即数码管显示数字 
+ 249   2                               Max7219_pinCS2=1;      
+ 250   2                               }                        
+ 251   1      }
+ 252          void Write_Max7219two(char address,char dat)
+ 253          {        
+ 254   1                      if(zhengfu==0)
+ 255   1               {
+ 256   2           Max7219_pinCS2=0;
+ 257   2               Write_Max7219_bytetwo(address);           //写入地址，即数码管编号
+ 258   2           Write_Max7219_bytetwo(dat);               //写入数据，即数码管显示数字 
+ 259   2               Max7219_pinCS2=1; 
+ 260   2                }else{  Max7219_pinCS=0;
+ 261   2                                       Write_Max7219_byte(address);           //写入地址，即数码管编号
+ 262   2                                   Write_Max7219_byte(dat);               //写入数据，即数码管显示数字 
+ 263   2                                       Max7219_pinCS=1;
+ 264   2                                       }                      
+ 265   1      }
+ 266          
+ 267          void Init_MAX7219(void)
+ 268          {
+ 269   1      
+ 270   1               Write_Max7219(0x09, 0x00);       //译码方式：BCD码
+ 271   1               Write_Max7219(0x0a, 0x03);       //亮度 
+ 272   1               Write_Max7219(0x0b, 0x07);       //扫描界限；8个数码管显示
+ 273   1               Write_Max7219(0x0c, 0x01);       //掉电模式：0，普通模式：1
+ 274   1               Write_Max7219(0x0f, 0x00);       //显示测试：1；测试结束，正常显示：0
+ 275   1              
+ 276   1               Write_Max7219two(0x09, 0x00);       //译码方式：BCD码
+ 277   1               Write_Max7219two(0x0a, 0x03);       //亮度 
+ 278   1               Write_Max7219two(0x0b, 0x07);       //扫描界限；8个数码管显示
+ 279   1               Write_Max7219two(0x0c, 0x01);       //掉电模式：0，普通模式：1
+ 280   1               Write_Max7219two(0x0f, 0x00);       //显示测试：1；测试结束，正常显示：0
+ 281   1      
+ 282   1      
+ 283   1      
+ 284   1      }
+ 285          void duiji()                                                                             
+ 286          {                                                                                                    
+ 287   1               Write_Max7219(1,hang1);                                                 
+ 288   1               Write_Max7219(2,hang2);                                 
+ 289   1               Write_Max7219(3,hang3);
+ 290   1               Write_Max7219(4,hang4);
+ 291   1               Write_Max7219(5,hang5);
+ 292   1               Write_Max7219(6,hang6);
+ 293   1               Write_Max7219(7,hang7);
+ 294   1               Write_Max7219(8,hang8);
+ 295   1      }
+ 296          void jianshao()
+ 297          {
+ 298   1      
+ 299   1               Write_Max7219two(1,~hangtwo1);
+ 300   1               Write_Max7219two(2,~hangtwo2);
+ 301   1               Write_Max7219two(3,~hangtwo3);
+ 302   1               Write_Max7219two(4,~hangtwo4);
+ 303   1               Write_Max7219two(5,~hangtwo5);
+C51 COMPILER V9.01   MAX7219                                                               07/29/2022 11:55:20 PAGE 6   
+
+ 304   1               Write_Max7219two(6,~hangtwo6);
+ 305   1               Write_Max7219two(7,~hangtwo7);
+ 306   1               Write_Max7219two(8,~hangtwo8);
+ 307   1      }
+ 308          
+ 309          int panduan(int a,int n)
+ 310          {
+ 311   1      
+ 312   1              int t=0;
+ 313   1              switch(n)
+ 314   1              {
+ 315   2              case 1: if(a==1||a==2||a==5||a==10||a==17||a==26||a==37||a==50)
+ 316   2                              t=1;
+ 317   2                              break;
+ 318   2              case 2: if(a==3||a==4||a==7||a==12||a==19||a==28||a==39||a==52)
+ 319   2                              t=1;
+ 320   2                              break;
+ 321   2              case 3: if(a==6||a==8||a==9||a==14||a==21||a==30||a==41||a==54)
+ 322   2                              t=1;
+ 323   2                              break;
+ 324   2              case 4: if(a==11||a==13||a==15||a==16||a==23||a==32||a==43||a==56)
+ 325   2                              t=1;
+ 326   2                              break;
+ 327   2              case 5: if(a==18||a==20||a==22||a==24||a==25||a==34||a==45||a==58)
+ 328   2                              t=1;
+ 329   2                              break;
+ 330   2              case 6: if(a==27||a==29||a==31||a==33||a==35||a==36||a==47||a==60)
+ 331   2                              t=1;
+ 332   2                              break;
+ 333   2              case 7: if(a==38||a==40||a==42||a==44||a==46||a==48||a==49||a==62)
+ 334   2                              t=1;
+ 335   2                              break;
+ 336   2              case 8: if(a==51||a==53||a==55||a==57||a==59||a==61||a==63||a==64)
+ 337   2                              t=1;
+ 338   2                              break;
+ 339   2      
+ 340   2              default:        t=0;
+ 341   2                      }
+ 342   1              return t;
+ 343   1      }
+ 344          int panduanzy(int a)
+ 345          {
+ 346   1              int i;
+ 347   1              int t=0;
+ 348   1              for(i=0;i<28;i++)
+ 349   1              {
+ 350   2                      if(a==you[i])
+ 351   2                      t=1;
+ 352   2              }
+ 353   1              return t;
+ 354   1      
+ 355   1      }
+ 356          int panduanyou(int a)
+ 357          {
+ 358   1              int i;
+ 359   1              int t=0;
+ 360   1              for(i=0;i<28;i++)
+ 361   1              {
+ 362   2                      if(a==you[i]+1)
+ 363   2                      t=1;
+ 364   2              }
+ 365   1              return t;
+C51 COMPILER V9.01   MAX7219                                                               07/29/2022 11:55:20 PAGE 7   
+
+ 366   1      
+ 367   1      }
+ 368          void xialuo(int n,int num,int hang,int hang2)
+ 369          {
+ 370   1              if(num>=49&&num<64)     Write_Max7219(n,hang|0x80),Write_Max7219(n+1,hang2&~0x80);      
+ 371   1              if(num>=36&&num<49)     Write_Max7219(n,hang|0x40),Write_Max7219(n+1,hang2&~0x40);
+ 372   1              if(num>=25&&num<36)     Write_Max7219(n,hang|0x20),Write_Max7219(n+1,hang2&~0x20);
+ 373   1              if(num>=16&&num<25)     Write_Max7219(n,hang|0x10),Write_Max7219(n+1,hang2&~0x10);
+ 374   1              if(num>=9&&num<16)      Write_Max7219(n,hang|0x08),Write_Max7219(n+1,hang2&~0x08);
+ 375   1              if(num>3&&num<9)        Write_Max7219(n,hang|0x04),Write_Max7219(n+1,hang2&~0x04);
+ 376   1      
+ 377   1      }
+ 378          void xialuozuo(int l,int num)
+ 379          {
+ 380   1              if(num>=49&&num<64)     Write_Max7219(8,hang8|l);       
+ 381   1              if(num>=36&&num<49)     Write_Max7219(7,hang7|l);//Write_Max7219(7,hang7&~l<<1);
+ 382   1              if(num>=25&&num<36)     Write_Max7219(6,hang6|l);//Write_Max7219(6,hang6&~l<<1);
+ 383   1              if(num>=16&&num<25)     Write_Max7219(5,hang5|l);//Write_Max7219(5,hang5&~l<<1);
+ 384   1              if(num>=9&&num<16)      Write_Max7219(4,hang4|l);//Write_Max7219(4,hang4&~l<<1);
+ 385   1              if(num>3&&num<9)        Write_Max7219(3,hang3|l);//Write_Max7219(3,hang3&~l<<1);
+ 386   1      
+ 387   1      }
+ 388          void xianshitime()
+ 389          {
+ 390   1              
+ 391   1              int i;
+ 392   1      
+ 393   1      
+ 394   1              if(shuju[2]==':')
+ 395   1              {
+ 396   2      
+ 397   2      
+ 398   2              for(i=1;i<5;i++) Write_Max7219two(i,(disp1[shuju[0]-0x30][i-1])); //十位  小时
+ 399   2              for(i=5;i<9;i++) Write_Max7219two(i,(disp1[shuju[1]-0x30][i-5]));       //个位
+ 400   2      
+ 401   2      
+ 402   2              for(i=5;i<9;i++)  Write_Max7219(i,(disp2[shuju[3]-0x30][i-5])); //十位                  分钟
+ 403   2              for(i=1;i<5;i++)  Write_Max7219(i,(disp2[shuju[4]-0x30][i-1])); //个位
+ 404   2      
+ 405   2              }
+ 406   1      
+ 407   1      }
+ 408          
+ 409          
+ 410          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   3105    ----
+   CONSTANT SIZE    =    136    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     46      14
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,7 @@
+"main.obj",
+"uart.obj",
+"iic.obj",
+"mpu6050.obj",
+"max7219.obj" 
+TO "sheng" 
+RAMSIZE(256) 
